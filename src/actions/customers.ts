@@ -50,9 +50,6 @@ export async function createCustomerAction(
 ): Promise<CustomerActionResult> {
   const access = await requirePermission("customers", "create");
   if (!access.allowed) return { success: false, message: access.message };
-  if (hasRole(access.user.role, "technician")) {
-    return { success: false, message: "Technicians cannot manage Customers." };
-  }
   const invalid = validationError(values);
   if (invalid) return invalid;
   const parsed = customerSchema.parse(values);
@@ -82,7 +79,6 @@ export async function updateCustomerAction(
 ): Promise<CustomerActionResult> {
   const access = await requirePermission("customers", "update");
   if (!access.allowed) return { success: false, message: access.message };
-  if (hasRole(access.user.role, "technician")) return { success: false, message: "Technicians cannot manage Customers." };
   const invalid = validationError(values);
   if (invalid) return invalid;
   const parsed = customerSchema.parse(values);

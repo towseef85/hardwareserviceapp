@@ -57,7 +57,7 @@ async function validateRelations(storeId: number, typeId: number, customerId: nu
 }
 
 export async function createServiceAction(values: ServiceFormValues): Promise<ServiceActionResult> {
-  const access = await requirePermission("services", "create"); if (!access.allowed) return { success: false, message: access.message }; if (hasRole(access.user.role, "technician")) return { success: false, message: "Technicians cannot create Services." };
+  const access = await requirePermission("services", "create"); if (!access.allowed) return { success: false, message: access.message };
   const invalid = validation(values); if (invalid) return invalid; const parsed = serviceSchema.parse(values); const storeId = scopedStore(Number(parsed.storeId), access.user); const typeId = Number(parsed.serviceTypeId); const customerId = Number(parsed.customerId); const technicianId = parsed.assignedTechnicianId ? Number(parsed.assignedTechnicianId) : null;
   const relation = await validateRelations(storeId, typeId, customerId, technicianId); if (!("typeName" in relation)) return relation;
   const baseCode = buildServiceCodeBase(relation.typeName, relation.customerName); let createdId: number | null = null;
@@ -68,7 +68,7 @@ export async function createServiceAction(values: ServiceFormValues): Promise<Se
 }
 
 export async function updateServiceAction(id: number, values: ServiceFormValues): Promise<ServiceActionResult> {
-  const access = await requirePermission("services", "update"); if (!access.allowed) return { success: false, message: access.message }; if (hasRole(access.user.role, "technician")) return { success: false, message: "Technicians have read-only Service access." };
+  const access = await requirePermission("services", "update"); if (!access.allowed) return { success: false, message: access.message };
   const invalid = validation(values); if (invalid) return invalid; const parsed = serviceSchema.parse(values); const scopeStoreId = hasRole(access.user.role, "admin") ? undefined : access.user.storeId; const rows = await db.select({ id: services.id, serviceTypeId: services.serviceTypeId, status: services.status, completedAt: services.completedAt, deliveredAt: services.deliveredAt }).from(services).where(and(eq(services.id, id), scopeStoreId ? eq(services.storeId, scopeStoreId) : undefined)).limit(1); if (!rows[0]) return { success: false, message: "The Service could not be found." };
   const storeId = scopedStore(Number(parsed.storeId), access.user); const typeId = Number(parsed.serviceTypeId); const customerId = Number(parsed.customerId); const technicianId = parsed.assignedTechnicianId ? Number(parsed.assignedTechnicianId) : null; const relation = await validateRelations(storeId, typeId, customerId, technicianId, rows[0].serviceTypeId); if (!relation.success) return relation;
   const changedAt = new Date();

@@ -15,7 +15,6 @@ function storeIdFor(requested: number, user: { role: string | null; storeId: num
 
 export async function createServiceTypeAction(values: ServiceTypeFormValues): Promise<ServiceTypeActionResult> {
   const access = await requirePermission("service-types", "create"); if (!access.allowed) return { success: false, message: access.message };
-  if (hasRole(access.user.role, "technician")) return { success: false, message: "Technicians cannot manage Service Types." };
   const invalid = validate(values); if (invalid) return invalid; const parsed = serviceTypeSchema.parse(values); const storeId = storeIdFor(Number(parsed.storeId), access.user);
   const store = await db.select({ id: stores.id }).from(stores).where(eq(stores.id, storeId)).limit(1); if (!store[0]) return { success: false, message: "The selected Store could not be found." };
   const inserted = await db.insert(serviceTypes).values({ storeId, name: parsed.name, isActive: parsed.isActive, description: parsed.description || null }).onConflictDoNothing().returning({ id: serviceTypes.id });
@@ -25,7 +24,6 @@ export async function createServiceTypeAction(values: ServiceTypeFormValues): Pr
 
 export async function updateServiceTypeAction(id: number, values: ServiceTypeFormValues): Promise<ServiceTypeActionResult> {
   const access = await requirePermission("service-types", "update"); if (!access.allowed) return { success: false, message: access.message };
-  if (hasRole(access.user.role, "technician")) return { success: false, message: "Technicians cannot manage Service Types." };
   const invalid = validate(values); if (invalid) return invalid; const parsed = serviceTypeSchema.parse(values); const scopeStoreId = hasRole(access.user.role, "admin") ? undefined : access.user.storeId;
   const current = await getScoped(id, scopeStoreId); if (!current) return { success: false, message: "The Service Type could not be found." };
   const storeId = storeIdFor(Number(parsed.storeId), access.user);

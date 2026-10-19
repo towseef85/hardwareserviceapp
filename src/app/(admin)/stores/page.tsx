@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { StoresTable } from "@/components/stores/stores-table";
 import { getStores } from "@/data/stores";
 import { requirePermission } from "@/lib/authorization";
+import { hasRole } from "@/lib/current-user";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -15,7 +16,11 @@ export const metadata: Metadata = {
 export default async function StoresPage() {
   const access = await requirePermission("stores", "view");
   if (!access.allowed) redirect("/unauthorized");
-  const storeRecords = await getStores();
+  const storeRecords = await getStores(
+    hasRole(access.user.role, "admin")
+      ? undefined
+      : access.user.storeId,
+  );
 
   const storeList = storeRecords.map((store) => ({
     id: store.id,
@@ -33,7 +38,7 @@ export default async function StoresPage() {
       <PageHeader
         title="Stores"
         description="Manage Stores and their assigned Cities."
-        actions={
+        actions={access.permission.canCreate ? (
           <Link
             href="/stores/create"
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
@@ -41,10 +46,14 @@ export default async function StoresPage() {
             <Plus size={18} />
             Add Store
           </Link>
-        }
+        ) : undefined}
       />
 
-      <StoresTable stores={storeList} />
+      <StoresTable
+        stores={storeList}
+        canUpdate={access.permission.canUpdate}
+        canDelete={access.permission.canDelete}
+      />
     </div>
   );
 }

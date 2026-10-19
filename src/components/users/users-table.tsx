@@ -36,10 +36,6 @@ export function UsersTable({
 }: UsersTableProps) {
   const [passwordUser, setPasswordUser] =
     useState<UserListItem | null>(null);
-  function handleEdit(userId: number) {
-    console.log("Edit User:", userId);
-  }
-
   function handleDelete(userId: number) {
     console.log("Delete User:", userId);
   }
@@ -231,15 +227,16 @@ export function UsersTable({
                       </>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(user.id)}
-                      aria-label={`Edit ${user.fullName}`}
-                      title="Edit User"
-                      className="flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      <Pencil size={17} />
-                    </button>
+                    {canManageSecurity && (
+                      <Link
+                        href={`/users/${user.id}/edit`}
+                        aria-label={`Edit ${user.fullName}`}
+                        title="Edit User"
+                        className="flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Pencil size={17} />
+                      </Link>
+                    )}
 
                     <button
                       type="button"

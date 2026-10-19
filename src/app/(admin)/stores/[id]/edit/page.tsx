@@ -7,6 +7,7 @@ import { StoreForm } from "@/components/stores/store-form";
 import { getCityOptions } from "@/data/cities";
 import { getStoreById } from "@/data/stores";
 import { requirePermission } from "@/lib/authorization";
+import { hasRole } from "@/lib/current-user";
 
 type EditStorePageProps = {
   params: Promise<{
@@ -31,7 +32,12 @@ export default async function EditStorePage({
   }
 
   const [store, cityOptions] = await Promise.all([
-    getStoreById(storeId),
+    getStoreById(
+      storeId,
+      hasRole(access.user.role, "admin")
+        ? undefined
+        : access.user.storeId,
+    ),
     getCityOptions(),
   ]);
 

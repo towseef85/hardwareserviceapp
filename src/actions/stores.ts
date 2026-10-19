@@ -10,7 +10,8 @@ import {
   storeSchema,
   type StoreFormValues,
 } from "@/validations/store";
-import { requireActiveAdmin } from "@/lib/current-user";
+import { requirePermission } from "@/lib/authorization";
+import { hasRole } from "@/lib/current-user";
 
 export type StoreActionResult =
   | {
@@ -68,7 +69,7 @@ function getStoreValidationErrors(
 export async function createStoreAction(
   values: StoreFormValues,
 ): Promise<StoreActionResult> {
-  const access = await requireActiveAdmin();
+  const access = await requirePermission("stores", "create");
 
 if (!access.allowed) {
   return {
@@ -156,7 +157,7 @@ export async function updateStoreAction(
   storeId: number,
   values: StoreFormValues,
 ): Promise<StoreActionResult> {
-  const access = await requireActiveAdmin();
+  const access = await requirePermission("stores", "update");
 
 if (!access.allowed) {
   return {
@@ -196,7 +197,14 @@ if (!access.allowed) {
       id: stores.id,
     })
     .from(stores)
-    .where(eq(stores.id, storeId))
+    .where(
+      and(
+        eq(stores.id, storeId),
+        hasRole(access.user.role, "admin")
+          ? undefined
+          : eq(stores.id, access.user.storeId),
+      ),
+    )
     .limit(1);
 
   if (existingStore.length === 0) {
@@ -264,7 +272,14 @@ if (!access.allowed) {
       address: validatedValues.address || null,
       updatedAt: new Date(),
     })
-    .where(eq(stores.id, storeId));
+    .where(
+      and(
+        eq(stores.id, storeId),
+        hasRole(access.user.role, "admin")
+          ? undefined
+          : eq(stores.id, access.user.storeId),
+      ),
+    );
 
   revalidatePath("/stores");
   revalidatePath(`/stores/${storeId}/edit`);
@@ -275,7 +290,7 @@ if (!access.allowed) {
 export async function deleteStoreAction(
   storeId: number,
 ): Promise<StoreActionResult> {
-  const access = await requireActiveAdmin();
+  const access = await requirePermission("stores", "delete");
 
 if (!access.allowed) {
   return {
@@ -293,7 +308,14 @@ if (!access.allowed) {
   try {
     const deletedStores = await db
       .delete(stores)
-      .where(eq(stores.id, storeId))
+      .where(
+        and(
+          eq(stores.id, storeId),
+          hasRole(access.user.role, "admin")
+            ? undefined
+            : eq(stores.id, access.user.storeId),
+        ),
+      )
       .returning({
         id: stores.id,
       });

@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-export const userSchema = z
-  .object({
+const userFields = {
     role: z.enum(["store-admin", "technician"], {
       message: "Select a valid role.",
     }),
@@ -56,7 +55,10 @@ export const userSchema = z
       .min(1, "Confirm your password."),
 
     isActive: z.boolean(),
-  })
+};
+
+export const userSchema = z
+  .object(userFields)
   .refine(
     (values) => values.password === values.confirmPassword,
     {
@@ -67,4 +69,21 @@ export const userSchema = z
 
 export type UserFormValues = z.infer<
   typeof userSchema
+>;
+
+export const userEditSchema = z.object({
+  role: z.enum(["admin", "store-admin", "technician"], {
+    message: "Select a valid role.",
+  }),
+  cityId: userFields.cityId,
+  storeId: userFields.storeId,
+  fullName: userFields.fullName,
+  contact: userFields.contact,
+  email: userFields.email,
+  username: userFields.username,
+  isActive: userFields.isActive,
+});
+
+export type UserEditFormValues = z.infer<
+  typeof userEditSchema
 >;

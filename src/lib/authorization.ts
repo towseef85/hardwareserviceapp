@@ -99,29 +99,6 @@ export async function getEffectivePermissionsForUser(
       permission,
   );
 
-  if (hasRole(role, "technician")) {
-    return merged.map((permission) => ({
-      ...permission,
-      canCreate: false,
-      canView: permission.moduleCode === "services",
-      canUpdate: false,
-      canDelete: false,
-    }));
-  }
-
-  if (hasRole(role, "store-admin")) {
-    return merged.map((permission) => ({
-      ...permission,
-      canDelete: [
-        "customers",
-        "service-types",
-        "services",
-      ].includes(permission.moduleCode)
-        ? false
-        : permission.canDelete,
-    }));
-  }
-
   return merged;
 }
 

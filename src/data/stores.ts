@@ -1,9 +1,9 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { cities, stores } from "@/db/schema";
 
-export async function getStores() {
+export async function getStores(storeId?: number) {
   return db
     .select({
       id: stores.id,
@@ -20,10 +20,14 @@ export async function getStores() {
       cities,
       eq(stores.cityId, cities.id),
     )
+    .where(storeId ? eq(stores.id, storeId) : undefined)
     .orderBy(asc(stores.engName));
 }
 
-export async function getStoreById(storeId: number) {
+export async function getStoreById(
+  storeId: number,
+  scopeStoreId?: number,
+) {
   const storeRecords = await db
     .select({
       id: stores.id,
@@ -36,7 +40,12 @@ export async function getStoreById(storeId: number) {
       address: stores.address,
     })
     .from(stores)
-    .where(eq(stores.id, storeId))
+    .where(
+      and(
+        eq(stores.id, storeId),
+        scopeStoreId ? eq(stores.id, scopeStoreId) : undefined,
+      ),
+    )
     .limit(1);
 
   return storeRecords[0] ?? null;

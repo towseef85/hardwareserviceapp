@@ -24,10 +24,14 @@ export type StoreListItem = {
 
 type StoresTableProps = {
   stores: StoreListItem[];
+  canUpdate: boolean;
+  canDelete: boolean;
 };
 
 export function StoresTable({
   stores,
+  canUpdate,
+  canDelete,
 }: StoresTableProps) {
   const router = useRouter();
 
@@ -199,7 +203,7 @@ export function StoresTable({
 
                   <td className="whitespace-nowrap px-5 py-4">
                     <div className="flex items-center justify-end gap-1">
-                      <button
+                      {canUpdate && <button
                         type="button"
                         onClick={() => handleEdit(store.id)}
                         aria-label={`Edit ${store.engName}`}
@@ -207,9 +211,9 @@ export function StoresTable({
                         className="flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
                       >
                         <Pencil size={17} />
-                      </button>
+                      </button>}
 
-                      <button
+                      {canDelete && <button
                         type="button"
                         onClick={() => openDeleteDialog(store)}
                         aria-label={`Delete ${store.engName}`}
@@ -217,7 +221,7 @@ export function StoresTable({
                         className="flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
                       >
                         <Trash2 size={17} />
-                      </button>
+                      </button>}
                     </div>
                   </td>
                 </tr>

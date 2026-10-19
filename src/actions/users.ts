@@ -16,13 +16,17 @@ import {
   cities,
   stores,
 } from "@/db/schema";
+import { user as authUsers } from "@/db/auth-schema";
 import {
   getCurrentUserAccess,
   hasRole,
+  requireActiveAdmin,
 } from "@/lib/current-user";
 import { auth } from "@/lib/auth";
 import {
   userSchema,
+  userEditSchema,
+  type UserEditFormValues,
   type UserFormValues,
 } from "@/validations/user";
 
@@ -268,5 +272,125 @@ if (!hasRole(access.role, "admin")) {
   }
 
   revalidatePath("/users");
+  redirect("/users");
+}
+
+export async function updateUserAction(
+  appUserId: number,
+  values: UserEditFormValues,
+): Promise<UserActionResult> {
+  const access = await requireActiveAdmin();
+
+  if (!access.allowed) {
+    return { success: false, message: access.message };
+  }
+
+  if (!Number.isInteger(appUserId) || appUserId <= 0) {
+    return { success: false, message: "The selected User is invalid." };
+  }
+
+  const validation = userEditSchema.safeParse(values);
+  if (!validation.success) {
+    const errors = validation.error.flatten().fieldErrors;
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: {
+        role: errors.role?.[0],
+        cityId: errors.cityId?.[0],
+        storeId: errors.storeId?.[0],
+        fullName: errors.fullName?.[0],
+        contact: errors.contact?.[0],
+        email: errors.email?.[0],
+        username: errors.username?.[0],
+        isActive: errors.isActive?.[0],
+      },
+    };
+  }
+
+  const data = validation.data;
+  const cityId = Number(data.cityId);
+  const storeId = Number(data.storeId);
+  const [targetUser, selectedStore] = await Promise.all([
+    db.select({ authUserId: appUsers.authUserId })
+      .from(appUsers)
+      .where(eq(appUsers.id, appUserId))
+      .limit(1),
+    db.select({ id: stores.id })
+      .from(stores)
+      .innerJoin(cities, eq(stores.cityId, cities.id))
+      .where(and(eq(stores.id, storeId), eq(cities.id, cityId)))
+      .limit(1),
+  ]);
+
+  if (!targetUser[0]) {
+    return { success: false, message: "The selected User could not be found." };
+  }
+
+  if (!selectedStore[0]) {
+    return {
+      success: false,
+      message: "The selected Store does not belong to the selected City.",
+      fieldErrors: { storeId: "Select a Store belonging to the selected City." },
+    };
+  }
+
+  if (
+    targetUser[0].authUserId === access.user.authUserId &&
+    (data.role !== "admin" || !data.isActive)
+  ) {
+    return {
+      success: false,
+      message: "You cannot remove your own administrator access or deactivate your own account.",
+    };
+  }
+
+  const email = data.email.toLowerCase();
+  const username = data.username.toLowerCase();
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.update(appUsers)
+        .set({
+          fullName: data.fullName,
+          contact: data.contact || null,
+          email,
+          username,
+          storeId,
+          isActive: data.isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(appUsers.id, appUserId));
+
+      if (targetUser[0].authUserId) {
+        await tx.update(authUsers)
+          .set({
+            name: data.fullName,
+            email,
+            username,
+            displayUsername: data.username,
+            role: data.role,
+            updatedAt: new Date(),
+          })
+          .where(eq(authUsers.id, targetUser[0].authUserId));
+      }
+    });
+  } catch (error: unknown) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? String(error.code)
+      : "";
+    if (code === "23505") {
+      return {
+        success: false,
+        message: "That email address or username is already in use.",
+      };
+    }
+    console.error("Failed to update User:", error);
+    return { success: false, message: "The User could not be updated. Please try again." };
+  }
+
+  revalidatePath("/users");
+  revalidatePath(`/users/${appUserId}/edit`);
+  revalidatePath(`/users/${appUserId}/permissions`);
   redirect("/users");
 }

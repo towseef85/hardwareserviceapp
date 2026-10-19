@@ -9,7 +9,7 @@ import { hasRole } from "@/lib/current-user";
 
 export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const access = await requirePermission("customers", "update");
-  if (!access.allowed || hasRole(access.user.role, "technician")) redirect("/unauthorized");
+  if (!access.allowed) redirect("/unauthorized");
   const id = Number((await params).id); if (!Number.isInteger(id) || id <= 0) notFound();
   const scopedStoreId = hasRole(access.user.role, "admin") ? undefined : access.user.storeId;
   const [customer, allStores] = await Promise.all([getCustomerById(id, scopedStoreId), getStoreOptions()]);
